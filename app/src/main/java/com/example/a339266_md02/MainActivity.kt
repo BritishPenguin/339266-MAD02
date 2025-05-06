@@ -1,6 +1,6 @@
 package com.example.a339266_md02
 
-//Android Imports
+// Android Imports
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,10 +22,10 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.*
 import androidx.navigation.navArgument
 
-//Data Class that stores selected cryptocurrency and cryptocurrency coinGecko ID
+// Data Class that stores selected cryptocurrency and cryptocurrency coinGecko ID
 data class Cryptocurrency(val name: String, val coingeckoId: String)
 
-//Main Class starting point of the app
+// Main Class starting point of the app
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -35,7 +35,7 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-//Composable for managing the navigation between pages
+// Composable for managing the navigation between pages
 @Composable
 fun CryptocurrencyExchangerApp() {
     val navController = rememberNavController()
@@ -43,7 +43,7 @@ fun CryptocurrencyExchangerApp() {
         composable("home") {
             HomeScreen(navController)
         }
-        //Navigation to Purchase screen parses CryptoID for importing Crypto exchange from CoinGecko
+        // Navigation to Purchase screen parses CryptoID for importing Crypto exchange from CoinGecko
         composable(
             "purchase/{cryptoId}",
             arguments = listOf(navArgument("cryptoId") { type = NavType.StringType })
@@ -51,14 +51,26 @@ fun CryptocurrencyExchangerApp() {
             val cryptoId = backStackEntry.arguments?.getString("cryptoId") ?: "bitcoin"
             PurchaseScreen(navController = navController, cryptoAbbreviation = cryptoId)
         }
-        //Navigation to Review screen (no data parsing)
+        // Navigation to CryptoValueScreen
+        composable(
+            "cryptoValue/{cryptoId}/{json}",
+            arguments = listOf(
+                navArgument("cryptoId") { type = NavType.StringType },
+                navArgument("json") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val cryptoId = backStackEntry.arguments?.getString("cryptoId") ?: ""
+            val json = backStackEntry.arguments?.getString("json") ?: ""
+            CryptoValueScreen(navController = navController, cryptoId = cryptoId, encodedJson = json)
+        }
+        // Navigation to Review screen (no data parsing)
         composable("review") {
             ReviewScreen(navController)
         }
     }
 }
 
-//Home Screen where available cryptocurrencies are displayed (search bar included)
+// Home Screen where available cryptocurrencies are displayed (search bar included)
 @Composable
 fun HomeScreen(navController: NavController) {
     val allCryptos = remember {
@@ -90,14 +102,12 @@ fun HomeScreen(navController: NavController) {
         )
     }
 
-    //Search query and state of selected cryptocurrency
     var searchQuery by remember { mutableStateOf("") }
     val filteredCryptos = allCryptos.filter {
         it.name.contains(searchQuery, ignoreCase = true) ||
                 it.coingeckoId.contains(searchQuery, ignoreCase = true)
     }
 
-    //Filters the cryptocurrencies depending on whats inputted into search bar
     var selectedCrypto by remember { mutableStateOf<Cryptocurrency?>(null) }
 
     Column(
@@ -105,7 +115,6 @@ fun HomeScreen(navController: NavController) {
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        //Title Code
         Text(
             text = "Cryptocurrency Exchanger",
             fontSize = 24.sp,
@@ -115,7 +124,6 @@ fun HomeScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        //Search Bar Code
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(text = "Search Currencies", modifier = Modifier.padding(end = 8.dp))
             OutlinedTextField(
@@ -128,15 +136,12 @@ fun HomeScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        //List of Cryptocurrencies
         Surface(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
         ) {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize()
-            ) {
+            LazyColumn(modifier = Modifier.fillMaxSize()) {
                 items(filteredCryptos) { crypto ->
                     val isSelected = selectedCrypto == crypto
                     val backgroundColor = if (isSelected) Color.LightGray else Color.Transparent
@@ -163,7 +168,6 @@ fun HomeScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        //Purchase Button for Navigating to Purchase Cryptocurrency Page
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -188,10 +192,9 @@ fun HomeScreen(navController: NavController) {
                 )
             }
 
-            //Review Button Navigates to Review Page
             Button(
                 onClick = {
-                    navController.navigate("review") // ✅ Navigates to Review screen
+                    navController.navigate("review")
                 },
                 modifier = Modifier
                     .weight(1f)

@@ -12,19 +12,19 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.example.a339266_md02.network.AdafruitApiService
 import org.json.JSONObject
+import androidx.compose.foundation.clickable
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 
 @Composable
 fun ReviewScreen(navController: NavController) {
-    //Cryptocurrency Purchases fetched from Adafruit
     var purchases by remember { mutableStateOf(listOf<JSONObject>()) }
-
-    // User input for list filtering
     var searchQuery by remember { mutableStateOf("") }
-
-    // Checks to see if data is still being sent
     var isLoading by remember { mutableStateOf(true) }
 
-    // 🌐 Fetch data from Adafruit when the screen is first composed
+    // New: State for selected item
+    var selectedPurchase by remember { mutableStateOf<JSONObject?>(null) }
+
     LaunchedEffect(true) {
         AdafruitApiService.fetchData { result, _ ->
             if (result != null) {
@@ -34,18 +34,15 @@ fun ReviewScreen(navController: NavController) {
         }
     }
 
-    // Filtering Purchases based on name of cryptocurrency
     val filtered = purchases.filter {
         it.optString("cryptocurrency", "").contains(searchQuery, ignoreCase = true)
     }
 
-    //UI Layout
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        //Title
         Text(
             text = "Cryptocurrency Exchanger",
             fontSize = 24.sp,
@@ -54,7 +51,6 @@ fun ReviewScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Search bar
         OutlinedTextField(
             value = searchQuery,
             onValueChange = { searchQuery = it },
@@ -64,14 +60,12 @@ fun ReviewScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        //Creates Scrollable List for viewing large numbers of cryptocurrency purchases
         Surface(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxWidth()
         ) {
             if (isLoading) {
-                // Shows a loading indicator due to Adafruit rate limiting
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -79,9 +73,7 @@ fun ReviewScreen(navController: NavController) {
                     CircularProgressIndicator()
                 }
             } else {
-                //Creates a table layout
                 Column(modifier = Modifier.fillMaxSize()) {
-                    // Table headers
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -97,12 +89,15 @@ fun ReviewScreen(navController: NavController) {
 
                     Divider()
 
-                    // Column to Show List Results
                     LazyColumn(modifier = Modifier.fillMaxSize()) {
                         items(filtered) { entry ->
+                            val isSelected = selectedPurchase == entry
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
+                                    .clickable {
+                                        selectedPurchase = if (isSelected) null else entry
+                                    }
                                     .padding(vertical = 4.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
@@ -112,7 +107,11 @@ fun ReviewScreen(navController: NavController) {
                                 Text("${entry.optString("percentageToMarket", "?")}%")
                                 Text("${entry.optString("holdingTime", "?")} Days")
                             }
-                            Divider()
+                            if (isSelected) {
+                                Divider(thickness = 2.dp, color = MaterialTheme.colorScheme.primary)
+                            } else {
+                                Divider()
+                            }
                         }
                     }
                 }
@@ -121,12 +120,27 @@ fun ReviewScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        //Back Button to return to main page
-        Button(
-            onClick = { navController.popBackStack() },
-            modifier = Modifier.align(Alignment.CenterHorizontally)
+        // Row with navigation and "Crypto Value" button
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly
         ) {
-            Text("Previous Page")
+            Button(onClick = { navController.popBackStack() }) {
+                Text("Previous Page")
+            }
+
+            Button(
+                onClick = {
+                    selectedPurchase?.let {
+                        val jsonEncoded = URLEncoder.encode(it.toString(), "UTF-8")
+                        val cryptoId = it.optString("cryptocurrency", "").lowercase()
+                        navController.navigate("cryptoValue/$cryptoId/$jsonEncoded")
+                    }
+                },
+                enabled = selectedPurchase != null
+            ) {
+                Text("Crypto Value")
+            }
         }
     }
 }
